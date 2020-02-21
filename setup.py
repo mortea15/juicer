@@ -12,11 +12,23 @@ long_desc = '''juicer -- an entity extractor and text processing utility.
 
 classifiers = [
     'Development Status :: 3 - Alpha',
-    'Topic :: Communications :: Email',
     'Intended Audience :: Sportradar, NTNU',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Education',
+    'Intended Audience :: Information Technology',
+    'Intended Audience :: Science/Research',
     'Operating System :: OS Independent',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Topic :: Scientific/Engineering',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Scientific/Engineering :: Human Machine Interfaces',
+    'Topic :: Scientific/Engineering :: Information Analysis',
     'Topic :: Text Processing',
+    'Topic :: Text Processing :: Filters',
+    'Topic :: Text Processing :: General',
+    'Topic :: Text Processing :: Linguistic'
 ]
 
 requires = [
