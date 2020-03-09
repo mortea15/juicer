@@ -35,7 +35,7 @@ HELPMSG = f'''usage: {APPNAME} (-f INPUT_FILE | -s) [-a] [-w] [-p] [-r] [-l] [-t
 
     {INDENT * 1}-c, --check         {INDENT * 2}Check if all required NLTK packages are present. Downloads missing packages.
 
-    {INDENT * 1}-v, --verbose       {INDENT * 2}Increase verbosity (can be used several times, e.g. -vv)
+    {INDENT * 1}-v, --verbose       {INDENT * 2}Increase verbosity (can be used twice, e.g. -vv)
     {INDENT * 1}--help              {INDENT * 2}Print this message
 '''
 
@@ -72,10 +72,10 @@ def main():
     Increase verbosity
     """
     opts_v = len(list(filter(lambda opt: opt == ('-v', ''), opts)))
-    if opts_v > 3:
-        opts_v = 3
+    if opts_v > 2:
+        opts_v = 2
     v = 0
-    while v <= opts_v:
+    while v < opts_v:
         increase_log_level()
         v += 1
     
