@@ -47,15 +47,14 @@ def remove_stopwords(text):
 
 def lemmatize(text):
     try:
-        ast = ARLSTem()
-        ast_stem = [ast.stem(word) for word in word_tokenize(text)]
-
+        #ast = ARLSTem()
+        #stemmed = [ast.stem(word) for word in word_tokenize(text)]
         wnl = WordNetLemmatizer()
-        wnl_stem = [wnl.lemmatize(word) for word in word_tokenize(text)]
-
-        return wnl_stem
+        stemmed = [wnl.lemmatize(word) for word in word_tokenize(text)]
+        return stemmed
     except Exception as e:
         logger.error(e)
+        return text
 
 
 def speech_tag(text, whitelisted=False):
@@ -67,9 +66,9 @@ def speech_tag(text, whitelisted=False):
     tagged = pos_tag(word_tokenize(text))
     
     if whitelisted:
-        return [tag for tag in tagged if tag[1] in whitelist]
+        return [tag[0] for tag in tagged if tag[1] in whitelist]
     
-    return tagged
+    return [tag[0] for tag in tagged]
 
 
 def extract_entities(text, whitelisted=False):
@@ -94,19 +93,22 @@ def ner_stanford(text, named_only=True):
     classified = st.tag(tokenized)
 
     if named_only:
-        return [tag for tag in classified if tag[1] is not 'O']
+        return [tag[0] for tag in classified if tag[1] is not 'O']
     
-    return classified
+    return [tag[0] for tag in classified]
 
 
-def process_text(text, named_only=True):
-    """Removes stopwords, lemmatizes each word and returns the processed text
+def process_text(text, named_only=True, ner=True):
+    """Removes stopwords, lemmatizes each word and
+        returns the extracted entities
     """
     logger.debug(f'Pre: {text}')
     nostops = remove_stopwords(text)
     logger.debug(f'No stops: {nostops}')
-    lemmatized = lemmatize(' '.join(nostops))
+    lemmatized = lemmatize(nostops)
     logger.debug(f'Lemmatized: {lemmatized}')
-    named_ents = ner_stanford(' '.join(lemmatized), named_only=named_only)
-    logger.debug(f'NER: {named_ents}')
-    return named_ents
+    if ner:
+        named_ents = ner_stanford(' '.join(lemmatized), named_only=named_only)
+        logger.debug(f'NER: {named_ents}')
+        return named_ents
+    return lemmatized
