@@ -12,7 +12,7 @@ $ .\.env\Scripts\activate     # win
 **Install**
 ```bash
 $ git clone git@github.com:mortea15/juicer.git
-$ cd katatasso && pip3 install .
+$ cd juicer && pip3 install .
 ```
 ```bash
 $ pip3 install git+ssh://git@github.com/mortea15/juicer.git
