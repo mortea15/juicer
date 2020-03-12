@@ -14,12 +14,13 @@ APPNAME = 'juicer'
 
 
 INDENT = '  '
-HELPMSG = f'''usage: {APPNAME} (-f INPUT_FILE | -s) [-a] [-w] [-p] [-r] [-l] [-t] [-e] [-n] [-d FORMAT] [-o OUTPUT_FILE] [-c] [-v] [-g]
+HELPMSG = f'''usage: {APPNAME} (-f INPUT_FILE | -s) [-a] [--ner] [-w] [-p] [-r] [-l] [-t] [-e] [-n] [-d FORMAT] [-o OUTPUT_FILE] [-c] [-v] [-g]
 
     {INDENT * 1}-f, --infile        {INDENT * 2}Extract entities from file
     {INDENT * 1}-s, --stdin         {INDENT * 2}Extract entities from STDIN
 
     {INDENT * 1}-a, --all           {INDENT * 2}Extract all entities (default is named entities only)
+    {INDENT * 1}--ner               {INDENT * 2}Enable Named Entity Recognition for `--process`. (disabled by default)
     {INDENT * 1}-w, --whitelist     {INDENT * 2}Extract whitelisted tags only (verbs and nouns)
 
     {INDENT * 1}-p, --process       {INDENT * 2}Process the input and output entities
@@ -45,6 +46,7 @@ def main():
     TEXT = None
     CONFIG = {
         'named': True,
+        'ner': False,
         'outfile': None,
         'format': 'plain',
         'whitelisted': False
@@ -60,7 +62,7 @@ def main():
     argv = sys.argv[1:]
 
     try:
-        opts, args = getopt.getopt(argv, 'f:sawprlteno:d:cvg', ['infile=', 'stdin', 'all', 'process', 'remove-stops', 'lemmatize', 'speech-tag', 'whitelist', 'extract', 'stanford', 'outfile=', 'format=', 'check', 'verbose', 'log-file', 'help'])
+        opts, args = getopt.getopt(argv, 'f:sawprlteno:d:cvg', ['infile=', 'stdin', 'all', 'ner', 'process', 'remove-stops', 'lemmatize', 'speech-tag', 'whitelist', 'extract', 'stanford', 'outfile=', 'format=', 'check', 'verbose', 'log-file', 'help'])
     except getopt.GetoptError:
         print(HELPMSG)
         sys.exit(2)
@@ -115,6 +117,9 @@ def main():
         elif opt in ('-a', '--all'):
             logger.debug(f'CONFIG: Extracting all entities')
             CONFIG['named'] = False
+        elif opt == '--ner':
+            logger.debug(f'CONFIG: Named Entity Extraction enabled')
+            CONFIG['ner'] = True
         elif opt in ('-w', '--whitelist'):
             logger.debug(f'CONFIG: Enabling whitelist')
             CONFIG['whitelisted'] = True
@@ -156,7 +161,7 @@ def main():
         elif opt in ('-p', '--process'):
             if TEXT:
                 logger.debug(f'ACTION: Processing text')
-                result = juicer.process_text(TEXT, named_only=CONFIG.get('named', True))
+                result = juicer.process_text(TEXT, named_only=CONFIG.get('named', True), ner=CONFIG.get('ner', False))
             else:
                 logger.error(f'Missing input (specify using -f or -s)')
                 sys.exit(2)
