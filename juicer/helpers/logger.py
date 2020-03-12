@@ -1,16 +1,11 @@
 import logging
 import os
 
-
 filename = 'juicer'
 
 logFormatter = logging.Formatter('%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s')
 rootLogger = logging.getLogger()
-rootLogger.setLevel(30)
-
-fileHandler = logging.FileHandler(f'{filename}.log')
-fileHandler.setFormatter(logFormatter)
-rootLogger.addHandler(fileHandler)
+rootLogger.setLevel(60)
 
 consoleHandler = logging.StreamHandler()
 consoleHandler.setFormatter(logFormatter)
@@ -30,3 +25,8 @@ def increase_log_level():
         if new_level % 10 == 0 and new_level in range(10,51):
             rootLogger.setLevel(current - 10)
             logging.info(f'Set log level to {levels.get(new_level)}')
+
+def log_to_file():
+    fileHandler = logging.FileHandler(f'{filename}.log')
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
