@@ -6,7 +6,7 @@ import sys
 
 import juicer
 from juicer.helpers.logger import rootLogger as logger
-from juicer.helpers.logger import increase_log_level
+from juicer.helpers.logger import increase_log_level, log_to_file
 from juicer.helpers.utils import prepare_result
 
 current = os.path.realpath(os.path.dirname(__file__))
@@ -14,12 +14,13 @@ APPNAME = 'juicer'
 
 
 INDENT = '  '
-HELPMSG = f'''usage: {APPNAME} (-f INPUT_FILE | -s) [-a] [-w] [-p] [-r] [-l] [-t] [-e] [-n] [-d FORMAT] [-o OUTPUT_FILE] [-c] [-v]
+HELPMSG = f'''usage: {APPNAME} (-f INPUT_FILE | -s) [-a] [--ner] [-w] [-p] [-r] [-l] [-t] [-e] [-n] [-d FORMAT] [-o OUTPUT_FILE] [-c] [-v] [-g]
 
     {INDENT * 1}-f, --infile        {INDENT * 2}Extract entities from file
     {INDENT * 1}-s, --stdin         {INDENT * 2}Extract entities from STDIN
 
     {INDENT * 1}-a, --all           {INDENT * 2}Extract all entities (default is named entities only)
+    {INDENT * 1}--ner               {INDENT * 2}Enable Named Entity Recognition for `--process`. (disabled by default)
     {INDENT * 1}-w, --whitelist     {INDENT * 2}Extract whitelisted tags only (verbs and nouns)
 
     {INDENT * 1}-p, --process       {INDENT * 2}Process the input and output entities
@@ -35,7 +36,8 @@ HELPMSG = f'''usage: {APPNAME} (-f INPUT_FILE | -s) [-a] [-w] [-p] [-r] [-l] [-t
 
     {INDENT * 1}-c, --check         {INDENT * 2}Check if all required NLTK packages are present. Downloads missing packages.
 
-    {INDENT * 1}-v, --verbose       {INDENT * 2}Increase verbosity (can be used twice, e.g. -vv)
+    {INDENT * 1}-v, --verbose       {INDENT * 2}Increase verbosity (can be used several times, e.g. -vvv)
+    {INDENT * 1}-g, --log-file      {INDENT * 2}Write log events to the file `{APPNAME}.log`
     {INDENT * 1}--help              {INDENT * 2}Print this message
 '''
 
@@ -44,6 +46,7 @@ def main():
     TEXT = None
     CONFIG = {
         'named': True,
+        'ner': False,
         'outfile': None,
         'format': 'plain',
         'whitelisted': False
@@ -59,7 +62,7 @@ def main():
     argv = sys.argv[1:]
 
     try:
-        opts, args = getopt.getopt(argv, 'f:sawprlteno:d:cv', ['infile=', 'stdin', 'all', 'process', 'remove-stops', 'lemmatize', 'speech-tag', 'whitelist', 'extract', 'stanford', 'outfile=', 'format=', 'check', 'verbose', 'help'])
+        opts, args = getopt.getopt(argv, 'f:sawprlteno:d:cvg', ['infile=', 'stdin', 'all', 'ner', 'process', 'remove-stops', 'lemmatize', 'speech-tag', 'whitelist', 'extract', 'stanford', 'outfile=', 'format=', 'check', 'verbose', 'log-file', 'help'])
     except getopt.GetoptError:
         print(HELPMSG)
         sys.exit(2)
@@ -72,12 +75,20 @@ def main():
     Increase verbosity
     """
     opts_v = len(list(filter(lambda opt: opt == ('-v', ''), opts)))
-    if opts_v > 2:
-        opts_v = 2
+    if opts_v > 4:
+        opts_v = 4
     v = 0
     while v < opts_v:
         increase_log_level()
         v += 1
+    
+    """
+    Log to file
+    """
+    if v > 0:
+        enable_logfile = list(filter(lambda opt: opt[0] in ('-l', '--log-file'), opts))
+        if enable_logfile:
+            log_to_file()
     
     for opt, arg in opts:
         if opt == '--help':
@@ -106,6 +117,9 @@ def main():
         elif opt in ('-a', '--all'):
             logger.debug(f'CONFIG: Extracting all entities')
             CONFIG['named'] = False
+        elif opt == '--ner':
+            logger.debug(f'CONFIG: Named Entity Extraction enabled')
+            CONFIG['ner'] = True
         elif opt in ('-w', '--whitelist'):
             logger.debug(f'CONFIG: Enabling whitelist')
             CONFIG['whitelisted'] = True
@@ -147,7 +161,7 @@ def main():
         elif opt in ('-p', '--process'):
             if TEXT:
                 logger.debug(f'ACTION: Processing text')
-                result = juicer.process_text(TEXT, named_only=CONFIG.get('named', True))
+                result = juicer.process_text(TEXT, named_only=CONFIG.get('named', True), ner=CONFIG.get('ner', False))
             else:
                 logger.error(f'Missing input (specify using -f or -s)')
                 sys.exit(2)

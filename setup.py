@@ -6,7 +6,7 @@ __contact__ = 'm.amundsen@sportradar.com'
 
 from setuptools import find_packages, setup
 
-version = '0.2.0'
+version = '0.2.1'
 long_desc = '''juicer -- an entity extractor and text processing utility.
 '''.lstrip()
 
