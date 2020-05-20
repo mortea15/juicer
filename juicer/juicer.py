@@ -10,7 +10,7 @@ try:
     from nltk.tokenize import word_tokenize, sent_tokenize
     from nltk.tag import StanfordNERTagger
     from nltk.corpus import stopwords
-    from nltk.stem.arlstem import ARLSTem
+    from nltk.stem.porter import PorterStemmer
     from nltk.stem.wordnet import WordNetLemmatizer
     from nltk import pos_tag, ne_chunk
     from nltk.data import find as find_nltk_package
@@ -37,49 +37,52 @@ def check_nltk_packages(dl_path='.nltk_data', quiet=True):
     return True
 
 
-def remove_stopwords(text):
+def __remove_stopwords(tokens):
     try:
-        stops = set(stopwords.words('english') + list(punctuation))
-        return [word for word in word_tokenize(text) if word not in stops]
+        __stops = set(stopwords.words('english') + list(punctuation))
+        return [word for word in tokens if word not in __stops]
     except Exception as e:
         logger.error(e)
 
 
-def lemmatize(text):
-    try:
-        #ast = ARLSTem()
-        #stemmed = [ast.stem(word) for word in word_tokenize(text)]
-        wnl = WordNetLemmatizer()
-        stemmed = [wnl.lemmatize(word) for word in word_tokenize(text)]
-        return stemmed
-    except Exception as e:
-        logger.error(e)
-        return text
-
-
-def speech_tag(text, whitelisted=False):
+def __speech_tag(tokens, nouns_verbs_only=False):
     whitelist = [
         'NNP', 'NN', 'NNS', 'NNPS',   # nouns
         'VBN', 'VBG', 'VBZ', 'VBP', 'VBD', 'VB' # verbs
     ]
 
-    tagged = pos_tag(word_tokenize(text))
+    tagged = pos_tag(tokens)
     
-    if whitelisted:
-        return [tag[0] for tag in tagged if tag[1] in whitelist]
+    if nouns_verbs_only:
+        return [tag for tag in tagged if tag[1] in whitelist]
     
-    return [tag[0] for tag in tagged]
+    return [tag for tag in tagged]
 
 
-def extract_entities(text, whitelisted=False):
-    entities = []
-    for sentence in sent_tokenize(text):
-        chunks = ne_chunk(speech_tag(sentence, whitelisted=whitelisted))
-        entities.extend([chunk for chunk in chunks if hasattr(chunk, 'label')])
-    return entities
+def __lemmatize(tags):
+    try:
+        wnl = WordNetLemmatizer()
+        lemmatized = []
+        for tag in tags:
+            # Get PoS according to WordNet req
+            wnpos = lambda e: ('a' if e[0].lower() == 'j' else e[0].lower()) if e[0].lower() in ['n', 'r', 'v'] else 'n'
+            lemmatized.append(wnl.lemmatize(tag[0], wnpos(tag[1])))
+        return lemmatized
+    except Exception as e:
+        logger.error(e)
+        return tags
 
 
-def ner_stanford(text, named_only=True):
+def __stem(tags):
+    try:
+        porter = PorterStemmer()
+        return [porter.stem(tag[0]) for tag in tags]
+    except Exception as e:
+        logger.error(e)
+        return [tag[0] for tag in tags]
+
+
+def __ner_stanford(tokens, named_only=False):
     stanford_path = os.getenv('STANFORD_NER_PATH', 'stanford_ner')
     class_path = os.path.join(stanford_path, 'classifiers/english.all.3class.distsim.crf.ser.gz')
     jar_path = os.path.join(stanford_path, 'stanford-ner.jar')
@@ -89,26 +92,112 @@ def ner_stanford(text, named_only=True):
         encoding='utf-8'
     )
 
-    tokenized = word_tokenize(text)
-    classified = st.tag(tokenized)
+    classified = st.tag(tokens)
 
     if named_only:
-        return [tag[0] for tag in classified if tag[1] is not 'O']
+        return [tag for tag in classified if tag[1] != 'O']
     
-    return [tag[0] for tag in classified]
+    return [tag for tag in classified]
 
 
-def process_text(text, named_only=True, ner=True):
-    """Removes stopwords, lemmatizes each word and
-        returns the extracted entities
+def preprocess(text, nouns_verbs_only=False, stemming=False):
+    """Preprocess the input
+
+        Performs tokenization, PoS tagging, and stemming/lemmatization
+
+        Parameters
+        ----------
+        text : str
+            The text to process
+
+        nouns_verbs_only : bool
+            Whether to extract verbs and nouns only. Defaults to False
+
+        stemming : bool
+            Use stemming instead of lemmatization. Defaults to False
+        
+        Returns
+        -------
+        text : str
+            The processed text
     """
-    logger.debug(f'Pre: {text}')
-    nostops = remove_stopwords(text)
-    logger.debug(f'No stops: {nostops}')
-    lemmatized = lemmatize(nostops)
-    logger.debug(f'Lemmatized: {lemmatized}')
-    if ner:
-        named_ents = ner_stanford(' '.join(lemmatized), named_only=named_only)
-        logger.debug(f'NER: {named_ents}')
-        return named_ents
-    return lemmatized
+    # Tokenize
+    tokenized = word_tokenize(text)
+
+    # Remove stopwords
+    no_stops = __remove_stopwords(tokenized)
+    logger.debug(f'No stops: {no_stops}')
+
+    # PoS tag
+    tagged = __speech_tag(no_stops, nouns_verbs_only=nouns_verbs_only)
+    logger.debug(f'PoS: {tagged}')
+
+    # Stem or Lem
+    if stemming:
+        stemmed = __stem(tagged)
+        logger.debug(f'Stemmed: {stemmed}')
+        return stemmed
+    else:
+        # Lemmatize
+        lemmatized = __lemmatize(tagged)
+        logger.debug(f'Lemmatized: {lemmatized}')
+        return lemmatized
+
+
+def extract_stanford(text, named_only=False, stemming=False):
+    """Performs entity extraction on the given text
+        using Stanford's NER
+
+        Parameters
+        ----------
+        text : str
+            The text to process
+
+        named_only : bool
+            Get named entities only. Defaults to False
+
+        stemming : bool
+            Use stemming instead of lemmatization. Defaults to False
+        
+        Returns
+        -------
+        text : str
+            The processed text
+    """
+    # Preprocess
+    processed = preprocess(text, stemming=stemming)
+
+    # Entity Extraction
+    entities = __ner_stanford(processed, named_only=named_only)
+    return ' '.join([tag[0] for tag in entities])
+
+
+def extract(text, nouns_verbs_only=False, stemming=False):
+    """Performs entity extraction on the given text
+
+        Parameters
+        ----------
+        text : str
+            The text to process
+
+        nouns_verbs_only : bool
+            Whether to extract verbs and nouns only. Defaults to False
+
+        stemming : bool
+            Use stemming instead of lemmatization. Defaults to False
+        
+        Returns
+        -------
+        text : str
+            The processed text
+    """
+    processed = ' '.join(preprocess(text, nouns_verbs_only=nouns_verbs_only, stemming=stemming))
+
+    # Entity Extraction
+    entities = []
+    for sent in sent_tokenize(processed):
+        for chunk in ne_chunk(pos_tag(word_tokenize(sent))):
+            if hasattr(chunk, 'label'):
+                logger.debug([f'{c[0]} : {chunk.label()}' for c in chunk])
+                entities.append(' '.join([c[0] for c in chunk]))
+    return ' '.join(entities)
