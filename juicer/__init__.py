@@ -5,5 +5,6 @@ from .juicer import (
     check_nltk_packages,
     preprocess,
     extract_stanford,
-    extract
+    extract,
+    initStanfordNERTagger
 )

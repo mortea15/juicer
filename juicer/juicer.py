@@ -82,7 +82,7 @@ def __stem(tags):
         return [tag[0] for tag in tags]
 
 
-def __ner_stanford(tokens, named_only=False):
+def initStanfordNERTagger():
     stanford_path = os.getenv('STANFORD_NER_PATH', 'stanford_ner')
     class_path = os.path.join(stanford_path, 'classifiers/english.all.3class.distsim.crf.ser.gz')
     jar_path = os.path.join(stanford_path, 'stanford-ner.jar')
@@ -91,8 +91,14 @@ def __ner_stanford(tokens, named_only=False):
         jar_path,
         encoding='utf-8'
     )
+    return st
 
-    classified = st.tag(tokens)
+
+def __ner_stanford(tokens, named_only=False, tagger=None):
+    if not tagger:
+        tagger = initStanfordNERTagger()
+
+    classified = tagger.tag(tokens)
 
     if named_only:
         return [tag for tag in classified if tag[1] != 'O']
@@ -144,7 +150,7 @@ def preprocess(text, nouns_verbs_only=False, stemming=False):
         return lemmatized
 
 
-def extract_stanford(text, named_only=False, stemming=False):
+def extract_stanford(text, named_only=False, stemming=False, tagger=None):
     """Performs entity extraction on the given text
         using Stanford's NER
 
@@ -158,6 +164,9 @@ def extract_stanford(text, named_only=False, stemming=False):
 
         stemming : bool
             Use stemming instead of lemmatization. Defaults to False
+
+        tagger : Instance of <StanfordNERTagger>
+            Provide an initialized tagger. Enables reuse
         
         Returns
         -------
@@ -168,7 +177,7 @@ def extract_stanford(text, named_only=False, stemming=False):
     processed = preprocess(text, stemming=stemming)
 
     # Entity Extraction
-    entities = __ner_stanford(processed, named_only=named_only)
+    entities = __ner_stanford(processed, named_only=named_only, tagger=tagger)
     return ' '.join([tag[0] for tag in entities])
 
 
